@@ -25,6 +25,13 @@ build/
 .env
 venv/
 
+# Tauri build
+ui/src-tauri/target/
+ui/dist/
+.claude/
+CLAUDE.md
+SPEC.md
+
 # IDE
 .vscode/
 .idea/
