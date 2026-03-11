@@ -391,3 +391,85 @@ def run_evaluate(
         json.dump(eval_report, f, indent=2)
 
     return {"eval_report": eval_report}
+
+
+# ---------------------------------------------------------------------------
+# Scoring stage — probability output with segments
+# ---------------------------------------------------------------------------
+
+SEGMENT_BOUNDS = [0.0, 0.25, 0.5, 0.75, 1.0]
+SEGMENT_NAMES = ["Low", "Medium", "High", "Very High"]
+
+
+def run_scoring(
+    target: str,
+    selected_features: list[str],
+) -> dict[str, Any]:
+    """Score every row in cleaned data: probability + segment columns. Return histogram data."""
+    model = joblib.load(DATA / "model.pkl")
+    df = pd.read_csv(DATA / "cleaned_fraud.csv")
+
+    # Encode non-numeric
+    encoders: dict[str, LabelEncoder] = {}
+    for col in df.columns:
+        if not pd.api.types.is_numeric_dtype(df[col]):
+            le = LabelEncoder()
+            df[col] = le.fit_transform(df[col].astype(str))
+            encoders[col] = le
+
+    available = [f for f in selected_features if f in df.columns]
+    X = df[available]
+    y = df[target]
+
+    probs = model.predict_proba(X)[:, 1]
+
+    # Assign segments
+    seg_numbers = np.digitize(probs, SEGMENT_BOUNDS[1:], right=False) + 1  # 1-4
+    seg_numbers = np.clip(seg_numbers, 1, 4)
+    seg_names = [SEGMENT_NAMES[n - 1] for n in seg_numbers]
+
+    # Build output CSV
+    df_out = pd.read_csv(DATA / "cleaned_fraud.csv")  # original (pre-encode) for readability
+    df_out["probability"] = np.round(probs, 6)
+    df_out["segment_name"] = seg_names
+    df_out["segment_number"] = seg_numbers
+    df_out.to_csv(DATA / "scored_output.csv", index=False)
+
+    # Build histogram data for the frontend (binned by probability)
+    n_bins = 40
+    bin_edges = np.linspace(0, 1, n_bins + 1)
+    hist_data = []
+    for i in range(n_bins):
+        lo, hi = float(bin_edges[i]), float(bin_edges[i + 1])
+        mask = (probs >= lo) & (probs < hi) if i < n_bins - 1 else (probs >= lo) & (probs <= hi)
+        count_no = int(((y[mask] == 0).sum()))
+        count_yes = int(((y[mask] == 1).sum()))
+        hist_data.append({
+            "bin_start": round(lo, 4),
+            "bin_end": round(hi, 4),
+            "count_no": count_no,
+            "count_yes": count_yes,
+            "count_total": count_no + count_yes,
+        })
+
+    avg_prob = float(np.mean(probs))
+
+    # Segment summary
+    segment_summary = []
+    for seg_num in range(1, 5):
+        mask = seg_numbers == seg_num
+        segment_summary.append({
+            "segment_number": seg_num,
+            "segment_name": SEGMENT_NAMES[seg_num - 1],
+            "count": int(mask.sum()),
+            "avg_probability": round(float(probs[mask].mean()), 4) if mask.any() else 0,
+            "target_rate": round(float(y[mask].mean()), 4) if mask.any() else 0,
+        })
+
+    return {
+        "total_rows": len(df),
+        "avg_probability": round(avg_prob, 4),
+        "histogram": hist_data,
+        "segments": segment_summary,
+        "output_path": str(DATA / "scored_output.csv"),
+    }

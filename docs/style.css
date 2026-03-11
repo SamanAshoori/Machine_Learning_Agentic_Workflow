@@ -1,0 +1,692 @@
+/* ============================================================
+   Base / Reset
+   ============================================================ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:         #0f1117;
+  --bg-surface: #161b27;
+  --bg-raised:  #1e2535;
+  --border:     #2a3144;
+  --text:       #c9d1e0;
+  --text-dim:   #6b7a99;
+  --text-bright:#e8edf5;
+  --accent:     #4f8ef7;
+  --accent-dim: #1e3a6e;
+  --green:      #3ecf8e;
+  --orange:     #f78c4f;
+  --red:        #f75f5f;
+  --purple:     #a78bfa;
+  --teal:       #2dd4bf;
+  --sidebar-w:  240px;
+  --font-mono:  'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+  --font-ui:    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-ui);
+  font-size: 15px;
+  line-height: 1.7;
+  display: flex;
+  min-height: 100vh;
+}
+
+/* ============================================================
+   Sidebar
+   ============================================================ */
+.sidebar {
+  position: fixed;
+  top: 0; left: 0;
+  width: var(--sidebar-w);
+  height: 100vh;
+  background: var(--bg-surface);
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 2rem;
+  z-index: 100;
+}
+
+.sidebar-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 1.4rem 1.2rem 1rem;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 0.5rem;
+}
+
+.logo-icon {
+  font-size: 18px;
+  color: var(--accent);
+}
+
+.logo-text {
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--text-bright);
+  letter-spacing: 0.02em;
+}
+
+.nav-list {
+  list-style: none;
+  padding: 0.25rem 0;
+}
+
+.nav-group-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-dim);
+  padding: 1rem 1.2rem 0.3rem;
+}
+
+.nav-link {
+  display: block;
+  padding: 0.4rem 1.2rem;
+  color: var(--text-dim);
+  text-decoration: none;
+  font-size: 13.5px;
+  border-left: 2px solid transparent;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+
+.nav-link:hover {
+  color: var(--text-bright);
+  background: rgba(79, 142, 247, 0.06);
+}
+
+.nav-link.active {
+  color: var(--accent);
+  border-left-color: var(--accent);
+  background: rgba(79, 142, 247, 0.08);
+}
+
+.nav-indent {
+  padding-left: 2rem;
+}
+
+/* ============================================================
+   Main content
+   ============================================================ */
+.content {
+  margin-left: var(--sidebar-w);
+  max-width: 860px;
+  padding: 0 3rem 6rem;
+  width: 100%;
+}
+
+section {
+  padding-top: 4rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+section:last-child { border-bottom: none; }
+
+/* ============================================================
+   Typography
+   ============================================================ */
+h1 {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: var(--text-bright);
+  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+h2 {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--text-bright);
+  margin: 2rem 0 0.75rem;
+}
+
+p { margin-bottom: 0.9rem; color: var(--text); }
+p:last-child { margin-bottom: 0; }
+
+.subtitle {
+  font-size: 1rem;
+  color: var(--text-dim);
+  margin-bottom: 1.5rem !important;
+}
+
+ul, ol {
+  padding-left: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+li { margin-bottom: 0.3rem; }
+
+.section-header { margin-bottom: 1.5rem; }
+
+/* ============================================================
+   Code
+   ============================================================ */
+code {
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.1em 0.4em;
+  color: var(--teal);
+}
+
+pre {
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1.1rem 1.3rem;
+  overflow-x: auto;
+  margin-bottom: 1rem;
+}
+
+pre code {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 0.88rem;
+  color: var(--text);
+  line-height: 1.6;
+}
+
+/* ============================================================
+   Tables
+   ============================================================ */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 1.5rem;
+  font-size: 0.9rem;
+}
+
+th {
+  text-align: left;
+  padding: 0.6rem 0.9rem;
+  background: var(--bg-raised);
+  color: var(--text-dim);
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border-bottom: 1px solid var(--border);
+}
+
+td {
+  padding: 0.6rem 0.9rem;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: rgba(255,255,255,0.02); }
+
+/* ============================================================
+   Cards
+   ============================================================ */
+.cards-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(175px, 1fr));
+  gap: 1rem;
+  margin: 1.5rem 0;
+}
+
+.card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1.2rem 1rem;
+  transition: border-color 0.2s;
+}
+
+.card:hover { border-color: var(--accent-dim); }
+
+.card-icon { font-size: 1.5rem; margin-bottom: 0.5rem; }
+
+.card-title {
+  font-weight: 600;
+  color: var(--text-bright);
+  font-size: 0.9rem;
+  margin-bottom: 0.4rem;
+}
+
+.card-body { font-size: 0.83rem; color: var(--text-dim); line-height: 1.5; }
+
+/* ============================================================
+   Pipeline flow
+   ============================================================ */
+.pipeline-flow {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  margin: 1.5rem 0;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.pipeline-step {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.8rem 1rem;
+  text-align: center;
+  min-width: 110px;
+  transition: border-color 0.2s;
+}
+
+.pipeline-step:hover { border-color: var(--accent); }
+
+.step-num {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.step-name {
+  font-weight: 700;
+  color: var(--text-bright);
+  font-size: 0.95rem;
+  margin: 0.15rem 0;
+}
+
+.step-desc {
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  line-height: 1.4;
+}
+
+.pipeline-arrow {
+  color: var(--text-dim);
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+
+/* ============================================================
+   Stage badge
+   ============================================================ */
+.stage-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 700;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* ============================================================
+   Output list
+   ============================================================ */
+.output-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 0.75rem 0 1rem;
+}
+
+.output-item {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--green);
+  border-radius: 6px;
+  padding: 0.6rem 0.9rem;
+  font-size: 0.88rem;
+}
+
+/* ============================================================
+   Segment bands
+   ============================================================ */
+.segment-bands {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0;
+  border-radius: 8px;
+  overflow: hidden;
+  margin: 1rem 0;
+  border: 1px solid var(--border);
+}
+
+.band {
+  padding: 0.9rem;
+  text-align: center;
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.band strong { display: block; font-size: 1.2rem; }
+.band span { font-size: 0.72rem; opacity: 0.8; }
+.band-1 { background: rgba(62, 207, 142, 0.12); color: var(--green); }
+.band-2 { background: rgba(79, 142, 247, 0.12); color: var(--accent); }
+.band-3 { background: rgba(247, 140, 79, 0.12); color: var(--orange); }
+.band-4 { background: rgba(247, 95, 95, 0.14); color: var(--red); }
+
+/* ============================================================
+   API endpoint blocks
+   ============================================================ */
+.endpoint-group { margin-bottom: 0.5rem; }
+
+.endpoint {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1rem 1.1rem;
+  margin-bottom: 0.75rem;
+}
+
+.endpoint > p { margin: 0.4rem 0 0.5rem; font-size: 0.88rem; }
+
+.method {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.15em 0.55em;
+  border-radius: 4px;
+  margin-right: 0.5rem;
+  font-family: var(--font-mono);
+  letter-spacing: 0.05em;
+}
+
+.method.get  { background: rgba(62, 207, 142, 0.15); color: var(--green); }
+.method.post { background: rgba(79, 142, 247, 0.15); color: var(--accent); }
+
+.endpoint-body,
+.endpoint-response {
+  margin-top: 0.75rem;
+}
+
+.endpoint-body pre,
+.endpoint-response pre {
+  margin-bottom: 0;
+}
+
+/* ============================================================
+   Architecture diagram
+   ============================================================ */
+.arch-diagram {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  margin: 1.5rem 0;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.arch-box {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1rem 1.2rem;
+  min-width: 150px;
+  text-align: center;
+}
+
+.arch-box strong {
+  display: block;
+  color: var(--text-bright);
+  font-size: 0.9rem;
+  margin-bottom: 0.4rem;
+}
+
+.arch-sub {
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  line-height: 1.6;
+}
+
+.arch-arrow {
+  text-align: center;
+  color: var(--text-dim);
+  font-size: 1.3rem;
+  flex-shrink: 0;
+}
+
+.arch-arrow span {
+  display: block;
+  font-size: 0.68rem;
+  color: var(--text-dim);
+  margin-bottom: 2px;
+}
+
+.arch-box.frontend { border-color: var(--accent-dim); }
+.arch-box.backend  { border-color: #2a3a1e; }
+.arch-box.data     { border-color: #3a2a1e; }
+
+/* ============================================================
+   Status flow
+   ============================================================ */
+.status-flow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin: 0.75rem 0 1rem;
+}
+
+.status-badge {
+  font-size: 0.78rem;
+  font-family: var(--font-mono);
+  padding: 0.25em 0.65em;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.status-badge.pending   { background: rgba(107,122,153,0.2); color: var(--text-dim); }
+.status-badge.running   { background: rgba(79,142,247,0.2); color: var(--accent); }
+.status-badge.awaiting  { background: rgba(167,139,250,0.2); color: var(--purple); }
+.status-badge.confirmed { background: rgba(62,207,142,0.2); color: var(--green); }
+.status-badge.complete  { background: rgba(62,207,142,0.35); color: var(--green); }
+
+.status-arrow { color: var(--text-dim); font-size: 0.9rem; }
+
+/* ============================================================
+   Tabs
+   ============================================================ */
+.tab-group {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: -1px;
+  position: relative;
+  z-index: 1;
+}
+
+.tab {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: 0.5rem 1rem;
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-family: var(--font-ui);
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.tab:hover { color: var(--text); }
+
+.tab.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+/* ============================================================
+   Two-column layout
+   ============================================================ */
+.two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  margin: 1rem 0;
+}
+
+.label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--text-dim);
+  margin-bottom: 0.5rem !important;
+}
+
+.note {
+  font-size: 0.82rem;
+  color: var(--text-dim);
+  margin-top: 0.5rem !important;
+}
+
+/* ============================================================
+   Architecture overview strip
+   ============================================================ */
+.arch-overview {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin: 1.5rem 0;
+}
+
+.arch-layer {
+  flex: 1;
+  min-width: 140px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1rem 1.1rem;
+  text-align: center;
+}
+
+.arch-layer.layer-tauri  { border-color: #2a3a5e; background: rgba(79,142,247,0.05); }
+.arch-layer.layer-svelte { border-color: #3a2a5e; background: rgba(167,139,250,0.05); }
+.arch-layer.layer-fastapi{ border-color: #1e3a2a; background: rgba(62,207,142,0.05); }
+
+.layer-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-dim);
+  margin-bottom: 0.3rem;
+}
+
+.layer-name {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-bright);
+  margin-bottom: 0.25rem;
+}
+
+.layer-role {
+  font-size: 0.78rem;
+  color: var(--text-dim);
+}
+
+.layer-contains {
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  flex-shrink: 0;
+  text-align: center;
+  font-style: italic;
+}
+
+/* ============================================================
+   Callout boxes
+   ============================================================ */
+.callout {
+  border-radius: 8px;
+  padding: 0.9rem 1.1rem;
+  font-size: 0.88rem;
+  margin: 1rem 0;
+  line-height: 1.6;
+}
+
+.callout-info {
+  background: rgba(79, 142, 247, 0.1);
+  border: 1px solid rgba(79, 142, 247, 0.3);
+  color: var(--text);
+}
+
+.callout strong { color: var(--accent); }
+
+/* ============================================================
+   Step-by-step flow
+   ============================================================ */
+.flow-steps {
+  margin: 1.25rem 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.flow-step {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.9rem 1rem;
+}
+
+.flow-num {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.flow-body {
+  font-size: 0.88rem;
+  line-height: 1.6;
+  color: var(--text);
+}
+
+.flow-body strong {
+  color: var(--text-bright);
+  display: block;
+  margin-bottom: 0.2rem;
+}
+
+.flow-connector {
+  width: 1px;
+  height: 20px;
+  background: var(--border);
+  margin-left: 13px;
+  flex-shrink: 0;
+}
+
+/* ============================================================
+   Responsive
+   ============================================================ */
+@media (max-width: 768px) {
+  :root { --sidebar-w: 0px; }
+  .sidebar { display: none; }
+  .content { margin-left: 0; padding: 0 1.2rem 4rem; }
+  .two-col { grid-template-columns: 1fr; }
+  .segment-bands { grid-template-columns: 1fr 1fr; }
+  .pipeline-flow { gap: 0.5rem; }
+  .pipeline-arrow { display: none; }
+}

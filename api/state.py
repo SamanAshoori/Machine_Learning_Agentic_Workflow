@@ -1,7 +1,7 @@
 import uuid
 from typing import Any, Optional
 
-STAGES = ["etl", "stats", "model", "evaluate"]
+STAGES = ["etl", "stats", "model", "evaluate", "scoring"]
 STAGE_ORDER = {s: i for i, s in enumerate(STAGES)}
 
 

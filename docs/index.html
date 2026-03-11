@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Agentic ML Pipeline — Docs</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <nav class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <span class="logo-icon">&#9670;</span>
+      <span class="logo-text">Agentic ML</span>
+    </div>
+    <ul class="nav-list">
+      <li><a href="#overview" class="nav-link active">Overview</a></li>
+      <li><a href="#setup" class="nav-link">Setup</a></li>
+      <li class="nav-group-label">Pipeline Stages</li>
+      <li><a href="#stage-etl" class="nav-link nav-indent">ETL</a></li>
+      <li><a href="#stage-stats" class="nav-link nav-indent">Stats</a></li>
+      <li><a href="#stage-model" class="nav-link nav-indent">Model</a></li>
+      <li><a href="#stage-evaluate" class="nav-link nav-indent">Evaluate</a></li>
+      <li><a href="#stage-score" class="nav-link nav-indent">Score</a></li>
+      <li class="nav-group-label">Reference</li>
+      <li><a href="#api" class="nav-link">API Endpoints</a></li>
+      <li><a href="#architecture" class="nav-link">Architecture</a></li>
+      <li><a href="#arch-layers" class="nav-link nav-indent">The three layers</a></li>
+      <li><a href="#arch-tauri-role" class="nav-link nav-indent">What Tauri/Rust does</a></li>
+      <li><a href="#arch-request-flow" class="nav-link nav-indent">Request flow</a></li>
+      <li><a href="#arch-upload-flow" class="nav-link nav-indent">Upload walkthrough</a></li>
+      <li><a href="#arch-state" class="nav-link nav-indent">State &amp; session</a></li>
+      <li><a href="#data-files" class="nav-link">Data Files</a></li>
+    </ul>
+  </nav>
+
+  <main class="content">
+
+    <!-- OVERVIEW -->
+    <section id="overview">
+      <div class="section-header">
+        <h1>Agentic ML Pipeline</h1>
+        <p class="subtitle">Dataset-agnostic ML classification with a desktop GUI</p>
+      </div>
+
+      <p>Upload any CSV, pick a target column, and step through five stages of an ML classification pipeline. Every stage pauses for your review before proceeding — no black boxes.</p>
+
+      <div class="cards-row">
+        <div class="card">
+          <div class="card-icon">&#128196;</div>
+          <div class="card-title">Any CSV</div>
+          <div class="card-body">Works on any binary classification dataset. Not tied to a specific schema.</div>
+        </div>
+        <div class="card">
+          <div class="card-icon">&#128064;</div>
+          <div class="card-title">Human-in-the-loop</div>
+          <div class="card-body">Every stage shows results and waits for your confirmation before moving on.</div>
+        </div>
+        <div class="card">
+          <div class="card-icon">&#128187;</div>
+          <div class="card-title">Desktop app</div>
+          <div class="card-body">Tauri v2 shell — runs as a native window on macOS and Windows.</div>
+        </div>
+        <div class="card">
+          <div class="card-icon">&#128200;</div>
+          <div class="card-title">Probability scoring</div>
+          <div class="card-body">Final stage outputs per-row probabilities and Low/Medium/High/Very High segments.</div>
+        </div>
+      </div>
+
+      <h2>Stack</h2>
+      <table>
+        <thead><tr><th>Layer</th><th>Technology</th></tr></thead>
+        <tbody>
+          <tr><td>Desktop shell</td><td>Tauri v2 (Rust)</td></tr>
+          <tr><td>Frontend</td><td>Svelte 5, Tailwind CSS 4, Vite</td></tr>
+          <tr><td>Backend</td><td>FastAPI (Python 3.10+)</td></tr>
+          <tr><td>ML</td><td>scikit-learn — RandomForest, LabelEncoder, mutual_info</td></tr>
+          <tr><td>Data</td><td>pandas, numpy, scipy</td></tr>
+          <tr><td>Charts</td><td>layerchart, d3-scale, d3-shape</td></tr>
+        </tbody>
+      </table>
+
+      <h2>Pipeline at a glance</h2>
+      <div class="pipeline-flow">
+        <div class="pipeline-step" data-stage="1">
+          <div class="step-num">1</div>
+          <div class="step-name">ETL</div>
+          <div class="step-desc">Upload · Target · Keep/Drop columns</div>
+        </div>
+        <div class="pipeline-arrow">&#8594;</div>
+        <div class="pipeline-step" data-stage="2">
+          <div class="step-num">2</div>
+          <div class="step-name">Stats</div>
+          <div class="step-desc">Correlation · VIF · Mutual info</div>
+        </div>
+        <div class="pipeline-arrow">&#8594;</div>
+        <div class="pipeline-step" data-stage="3">
+          <div class="step-num">3</div>
+          <div class="step-name">Model</div>
+          <div class="step-desc">RandomForest · Hyperparams</div>
+        </div>
+        <div class="pipeline-arrow">&#8594;</div>
+        <div class="pipeline-step" data-stage="4">
+          <div class="step-num">4</div>
+          <div class="step-name">Evaluate</div>
+          <div class="step-desc">Threshold tuning · Metrics</div>
+        </div>
+        <div class="pipeline-arrow">&#8594;</div>
+        <div class="pipeline-step" data-stage="5">
+          <div class="step-num">5</div>
+          <div class="step-name">Score</div>
+          <div class="step-desc">Probability · Segments · CSV</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SETUP -->
+    <section id="setup">
+      <h1>Setup</h1>
+
+      <h2>Prerequisites</h2>
+      <table>
+        <thead><tr><th>Tool</th><th>macOS</th><th>Windows</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>Python 3.10+</td>
+            <td><code>brew install python</code></td>
+            <td>python.org — tick "Add to PATH"</td>
+          </tr>
+          <tr>
+            <td>Node.js 18+</td>
+            <td><code>brew install node</code></td>
+            <td>nodejs.org LTS installer</td>
+          </tr>
+          <tr>
+            <td>Rust</td>
+            <td><code>curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh</code></td>
+            <td>rustup.rs installer</td>
+          </tr>
+          <tr>
+            <td>Xcode CLI</td>
+            <td><code>xcode-select --install</code></td>
+            <td>—</td>
+          </tr>
+          <tr>
+            <td>C++ Build Tools + WebView2</td>
+            <td>—</td>
+            <td>See tauri.app/start/prerequisites</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2>1. Python backend</h2>
+      <div class="tab-group">
+        <button class="tab active" data-tab="mac-setup">macOS / Linux</button>
+        <button class="tab" data-tab="win-setup">Windows</button>
+      </div>
+      <div class="tab-content active" id="mac-setup">
+        <pre><code>python3 -m venv venv
+source venv/bin/activate
+pip install fastapi uvicorn pandas numpy scikit-learn scipy joblib python-dotenv</code></pre>
+      </div>
+      <div class="tab-content" id="win-setup">
+        <pre><code>python -m venv venv
+venv\Scripts\activate
+pip install fastapi uvicorn pandas numpy scikit-learn scipy joblib python-dotenv</code></pre>
+      </div>
+
+      <h2>2. Frontend</h2>
+      <pre><code>cd ui
+npm install</code></pre>
+
+      <h2>Running (development)</h2>
+      <p>Open two terminals from the project root.</p>
+
+      <div class="two-col">
+        <div>
+          <p class="label">Terminal 1 — API</p>
+          <div class="tab-group small">
+            <button class="tab active" data-tab="mac-run">macOS</button>
+            <button class="tab" data-tab="win-run">Windows</button>
+          </div>
+          <div class="tab-content active" id="mac-run">
+            <pre><code>source venv/bin/activate
+uvicorn api.main:app --reload --port 8000</code></pre>
+          </div>
+          <div class="tab-content" id="win-run">
+            <pre><code>venv\Scripts\activate
+uvicorn api.main:app --reload --port 8000</code></pre>
+          </div>
+        </div>
+        <div>
+          <p class="label">Terminal 2 — App</p>
+          <pre><code>cd ui
+npm run tauri dev</code></pre>
+          <p class="note">Browser-only (no Tauri): <code>npm run dev</code> then open <code>localhost:5173</code></p>
+        </div>
+      </div>
+
+      <h2>Building a distributable</h2>
+      <pre><code>cd ui
+npm run tauri build</code></pre>
+      <table>
+        <thead><tr><th>Platform</th><th>Output path</th><th>Format</th></tr></thead>
+        <tbody>
+          <tr><td>macOS</td><td><code>ui/src-tauri/target/release/bundle/macos/</code></td><td>.app + .dmg</td></tr>
+          <tr><td>Windows</td><td><code>ui/src-tauri/target/release/bundle/msi/</code></td><td>.msi / .exe</td></tr>
+        </tbody>
+      </table>
+      <p class="note">First build takes several minutes — Rust compiles from scratch.</p>
+    </section>
+
+    <!-- STAGE: ETL -->
+    <section id="stage-etl">
+      <h1><span class="stage-badge">1</span> ETL Stage</h1>
+      <p>The entry point. Upload a CSV, choose the column you want to predict, then review every column and decide what to keep.</p>
+
+      <h2>What you do</h2>
+      <ol>
+        <li>Upload any <code>.csv</code> file.</li>
+        <li>Select the <strong>target column</strong> (binary: 0/1 or two distinct values).</li>
+        <li>The backend runs statistical tests (Mann-Whitney U for numerics, chi-squared for categoricals) comparing each column against the target.</li>
+        <li>Review each column — set to <strong>Keep</strong>, <strong>Drop</strong>, or leave blank with an optional note.</li>
+        <li>Confirm to produce the cleaned dataset.</li>
+      </ol>
+
+      <h2>What happens in the backend</h2>
+      <ul>
+        <li>Dropped columns are removed.</li>
+        <li>Non-numeric columns are encoded with <code>LabelEncoder</code>.</li>
+        <li>Class weights are computed (<code>sklearn.utils.class_weight.compute_class_weight</code>) and saved.</li>
+      </ul>
+
+      <h2>Outputs</h2>
+      <div class="output-list">
+        <div class="output-item"><code>data/cleaned_fraud.csv</code> — cleaned dataset with only kept columns</div>
+        <div class="output-item"><code>data/class_weights.json</code> — per-class weights for imbalanced datasets</div>
+      </div>
+    </section>
+
+    <!-- STAGE: STATS -->
+    <section id="stage-stats">
+      <h1><span class="stage-badge">2</span> Stats Stage</h1>
+      <p>Automated feature selection using multiple statistical methods. You review the results and choose which features to pass to model training.</p>
+
+      <h2>Methods run</h2>
+      <table>
+        <thead><tr><th>Method</th><th>Purpose</th><th>Threshold</th></tr></thead>
+        <tbody>
+          <tr><td>Pearson correlation</td><td>Linear relationship with target</td><td>|r| &gt; 0.05</td></tr>
+          <tr><td>Chi-squared</td><td>Categorical independence test</td><td>p &lt; 0.05</td></tr>
+          <tr><td>VIF (Variance Inflation Factor)</td><td>Detect multicollinearity</td><td>VIF &lt; 10</td></tr>
+          <tr><td>Mutual Information</td><td>Non-linear dependency with target</td><td>MI &gt; 0</td></tr>
+        </tbody>
+      </table>
+
+      <h2>Auto-selection logic</h2>
+      <p>A feature is auto-selected if it passes at least one test and does not have a VIF above the threshold. You can override any selection before confirming.</p>
+
+      <h2>Outputs</h2>
+      <div class="output-list">
+        <div class="output-item"><code>data/selected_features.json</code> — list of feature names to use in model training</div>
+      </div>
+    </section>
+
+    <!-- STAGE: MODEL -->
+    <section id="stage-model">
+      <h1><span class="stage-badge">3</span> Model Stage</h1>
+      <p>Train a Random Forest classifier with configurable hyperparameters. Review metrics before confirming.</p>
+
+      <h2>Hyperparameters</h2>
+      <table>
+        <thead><tr><th>Parameter</th><th>Default</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>n_estimators</code></td><td>100</td><td>Number of trees in the forest</td></tr>
+          <tr><td><code>max_depth</code></td><td>10</td><td>Maximum depth of each tree (null = unlimited)</td></tr>
+          <tr><td><code>class_weight</code></td><td>balanced</td><td><code>balanced</code> or <code>none</code></td></tr>
+          <tr><td><code>test_split</code></td><td>0.2</td><td>Fraction of data held out for testing</td></tr>
+        </tbody>
+      </table>
+
+      <h2>Metrics shown</h2>
+      <ul>
+        <li>ROC-AUC (test set)</li>
+        <li>Precision, Recall, F1 per class</li>
+        <li>Confusion matrix</li>
+        <li>Feature importances (top 20)</li>
+      </ul>
+
+      <h2>Outputs</h2>
+      <div class="output-list">
+        <div class="output-item"><code>data/model.pkl</code> — serialised RandomForestClassifier (joblib)</div>
+        <div class="output-item"><code>data/model_metrics.json</code> — full metrics dict</div>
+      </div>
+    </section>
+
+    <!-- STAGE: EVALUATE -->
+    <section id="stage-evaluate">
+      <h1><span class="stage-badge">4</span> Evaluate Stage</h1>
+      <p>Tune the classification threshold on a validation split. Trade off precision vs recall based on your business priority.</p>
+
+      <h2>What it does</h2>
+      <p>Sweeps classification thresholds from 0.1 to 0.9 and computes precision, recall, F1, and false-positive count at each point. Results are shown as an interactive chart.</p>
+
+      <h2>Confirm options</h2>
+      <table>
+        <thead><tr><th>Field</th><th>Options</th><th>Effect</th></tr></thead>
+        <tbody>
+          <tr><td><code>threshold</code></td><td>0.0 – 1.0</td><td>Probability cutoff used in scoring stage</td></tr>
+          <tr><td><code>primary_metric</code></td><td><code>recall</code> / <code>precision</code> / <code>f1</code></td><td>Highlighted metric in the UI</td></tr>
+        </tbody>
+      </table>
+
+      <h2>Outputs</h2>
+      <div class="output-list">
+        <div class="output-item"><code>data/eval_report.json</code> — threshold sweep results + confirmed threshold</div>
+      </div>
+    </section>
+
+    <!-- STAGE: SCORE -->
+    <section id="stage-score">
+      <h1><span class="stage-badge">5</span> Score Stage</h1>
+      <p>Run the trained model on the full dataset. Every row gets a probability and a segment. Download the result as a CSV.</p>
+
+      <h2>Output columns added</h2>
+      <table>
+        <thead><tr><th>Column</th><th>Type</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>probability</code></td><td>float 0–1</td><td>Model's predicted probability for the positive class</td></tr>
+          <tr><td><code>segment_name</code></td><td>string</td><td>Low / Medium / High / Very High</td></tr>
+          <tr><td><code>segment_number</code></td><td>int 1–4</td><td>1 = Low, 2 = Medium, 3 = High, 4 = Very High</td></tr>
+        </tbody>
+      </table>
+
+      <h2>Segment thresholds</h2>
+      <p>Equal-width quartiles on the 0–1 probability range:</p>
+      <div class="segment-bands">
+        <div class="band band-1"><strong>1</strong><br/>Low<br/><span>0.00 – 0.25</span></div>
+        <div class="band band-2"><strong>2</strong><br/>Medium<br/><span>0.25 – 0.50</span></div>
+        <div class="band band-3"><strong>3</strong><br/>High<br/><span>0.50 – 0.75</span></div>
+        <div class="band band-4"><strong>4</strong><br/>Very High<br/><span>0.75 – 1.00</span></div>
+      </div>
+
+      <h2>Outputs</h2>
+      <div class="output-list">
+        <div class="output-item"><code>data/scored_output.csv</code> — full dataset + probability + segment columns</div>
+      </div>
+      <p>The UI shows a probability histogram colour-coded by actual target value (teal = 0, orange = 1) with segment boundaries overlaid.</p>
+    </section>
+
+    <!-- API REFERENCE -->
+    <section id="api">
+      <h1>API Reference</h1>
+      <p>The FastAPI backend runs on <code>http://localhost:8000</code>. Interactive docs at <code>/docs</code>.</p>
+
+      <div class="endpoint-group">
+        <h2>Session</h2>
+        <div class="endpoint">
+          <span class="method get">GET</span><code>/status</code>
+          <p>Returns current session state: stage statuses, current stage, confirmed outputs.</p>
+        </div>
+        <div class="endpoint">
+          <span class="method post">POST</span><code>/reset</code>
+          <p>Clears all session state. Does not delete files in <code>data/</code>.</p>
+        </div>
+      </div>
+
+      <div class="endpoint-group">
+        <h2>ETL</h2>
+        <div class="endpoint">
+          <span class="method post">POST</span><code>/upload</code>
+          <p>Upload a CSV file (multipart/form-data). Returns row/column counts and basic column info.</p>
+          <div class="endpoint-response">
+            <pre><code>// Response
+{
+  "filename": "fraudTrain.csv",
+  "rows": 1296675,
+  "columns": 23,
+  "column_info": [...]
+}</code></pre>
+          </div>
+        </div>
+        <div class="endpoint">
+          <span class="method get">GET</span><code>/columns</code>
+          <p>Detailed per-column stats: dtype, null count, unique count, mean/std/min/max for numerics, top values for categoricals.</p>
+        </div>
+        <div class="endpoint">
+          <span class="method post">POST</span><code>/analyze/target</code>
+          <p>Run statistical tests for all columns against the chosen target.</p>
+          <div class="endpoint-body">
+            <pre><code>// Body
+{ "target": "is_fraud" }</code></pre>
+          </div>
+        </div>
+        <div class="endpoint">
+          <span class="method post">POST</span><code>/confirm/etl</code>
+          <p>Apply column keep/drop decisions. Produces cleaned CSV and class weights.</p>
+          <div class="endpoint-body">
+            <pre><code>// Body
+{
+  "target": "is_fraud",
+  "columns": [
+    { "column": "amt", "decision": "keep", "note": "" },
+    { "column": "zip", "decision": "drop", "note": "too many uniques" }
+  ]
+}</code></pre>
+          </div>
+        </div>
+      </div>
+
+      <div class="endpoint-group">
+        <h2>Stats</h2>
+        <div class="endpoint">
+          <span class="method post">POST</span><code>/run/stats</code>
+          <p>Run correlation, VIF, mutual information. Returns per-feature scores and auto-selected feature list. ETL must be confirmed first.</p>
+        </div>
+        <div class="endpoint">
+          <span class="method post">POST</span><code>/confirm/stats</code>
+          <p>Save the final feature selection.</p>
+          <div class="endpoint-body">
+            <pre><code>// Body
+{ "selected_features": ["amt", "city_pop", "unix_time", ...] }</code></pre>
+          </div>
+        </div>
+      </div>
+
+      <div class="endpoint-group">
+        <h2>Model</h2>
+        <div class="endpoint">
+          <span class="method post">POST</span><code>/run/model</code>
+          <p>Train the RandomForest classifier. Stats must be confirmed first.</p>
+          <div class="endpoint-body">
+            <pre><code>// Body
+{
+  "model_type": "RandomForest",
+  "hyperparameters": {
+    "n_estimators": 100,
+    "max_depth": 10,
+    "class_weight": "balanced",
+    "test_split": 0.2
+  }
+}</code></pre>
+          </div>
+        </div>
+        <div class="endpoint">
+          <span class="method post">POST</span><code>/confirm/model</code>
+          <p>Confirm the trained model. Same body shape as <code>/run/model</code>.</p>
+        </div>
+      </div>
+
+      <div class="endpoint-group">
+        <h2>Evaluate</h2>
+        <div class="endpoint">
+          <span class="method post">POST</span><code>/run/evaluate</code>
+          <p>Threshold sweep on validation split. Model must be confirmed first. No body required.</p>
+        </div>
+        <div class="endpoint">
+          <span class="method post">POST</span><code>/confirm/evaluate</code>
+          <div class="endpoint-body">
+            <pre><code>// Body
+{ "threshold": 0.8, "primary_metric": "recall" }</code></pre>
+          </div>
+        </div>
+      </div>
+
+      <div class="endpoint-group">
+        <h2>Scoring</h2>
+        <div class="endpoint">
+          <span class="method post">POST</span><code>/run/scoring</code>
+          <p>Score the full dataset. Evaluate must be confirmed first. No body required.</p>
+        </div>
+        <div class="endpoint">
+          <span class="method get">GET</span><code>/download/scored</code>
+          <p>Download <code>scored_output.csv</code>. Returns 404 if scoring has not been run.</p>
+        </div>
+      </div>
+
+      <div class="endpoint-group">
+        <h2>Utility</h2>
+        <div class="endpoint">
+          <span class="method get">GET</span><code>/output/{stage}</code>
+          <p>Retrieve the cached output for any stage. <code>stage</code> is one of: <code>etl</code>, <code>stats</code>, <code>model</code>, <code>evaluate</code>, <code>scoring</code>.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ARCHITECTURE -->
+    <section id="architecture">
+      <h1>Architecture</h1>
+      <p>
+        This app is built from three separate layers that each do a distinct job.
+        Understanding what each one is responsible for — and what it is <em>not</em> responsible for — is the key to the whole thing.
+      </p>
+
+      <div class="arch-overview">
+        <div class="arch-layer layer-tauri">
+          <div class="layer-label">Layer 1</div>
+          <div class="layer-name">Tauri (Rust)</div>
+          <div class="layer-role">Window &amp; OS shell</div>
+        </div>
+        <div class="layer-contains">contains</div>
+        <div class="arch-layer layer-svelte">
+          <div class="layer-label">Layer 2</div>
+          <div class="layer-name">Svelte + Vite</div>
+          <div class="layer-role">UI rendered inside the window</div>
+        </div>
+        <div class="layer-contains">talks to</div>
+        <div class="arch-layer layer-fastapi">
+          <div class="layer-label">Layer 3</div>
+          <div class="layer-name">FastAPI (Python)</div>
+          <div class="layer-role">All ML computation</div>
+        </div>
+      </div>
+    </section>
+
+    <section id="arch-layers">
+      <h1>The three layers explained</h1>
+
+      <h2>Layer 1 — Tauri (Rust): the window</h2>
+      <p>
+        Tauri is a framework for building desktop apps. Its job is to create a native OS window and render a web page inside it using the operating system's built-in browser engine (WebKit on macOS, WebView2 on Windows).
+      </p>
+      <p>
+        <strong>Tauri is not the backend.</strong> It does not process data, run ML models, or handle API requests. It is essentially a frame around a web page — the same way Electron works, but much lighter because it uses the OS browser instead of bundling Chromium.
+      </p>
+      <p>
+        In this project the Rust code (<code>ui/src-tauri/src/lib.rs</code>) does almost nothing beyond creating the window:
+      </p>
+      <pre><code>// This is the entire Rust source — it just launches the window
+pub fn run() {
+  tauri::Builder::default()
+    .setup(|app| { /* logging only */ Ok(()) })
+    .run(tauri::generate_context!())
+    .expect("error while running tauri application");
+}</code></pre>
+      <p>No custom Rust commands. No Rust logic. Rust's only role here is to create the native window and hand it a URL to display.</p>
+
+      <h2>Layer 2 — Svelte + Vite: the UI</h2>
+      <p>
+        The UI is a standard web app — HTML, CSS, and JavaScript — built with Svelte and compiled by Vite.
+        In development, Vite serves it at <code>http://localhost:5173</code>. Tauri points its window at that URL, so you see the Svelte app rendered inside the native window.
+      </p>
+      <p>
+        The UI is responsible for:
+      </p>
+      <ul>
+        <li>Displaying forms, tables, charts, and status indicators</li>
+        <li>Holding temporary UI state (which stage is active, what the user typed)</li>
+        <li>Calling the FastAPI backend when the user takes an action</li>
+        <li>Rendering results returned from the backend</li>
+      </ul>
+      <p>
+        The UI does <strong>no ML computation</strong>. It does not touch CSV files directly. Every action that changes data goes through the API.
+      </p>
+
+      <h2>Layer 3 — FastAPI (Python): the actual backend</h2>
+      <p>
+        FastAPI is a separate Python process you start yourself with <code>uvicorn</code>. It runs on <code>http://localhost:8000</code>.
+        This is where all real work happens: reading CSVs, running scikit-learn, training models, scoring data.
+      </p>
+      <p>
+        The UI talks to FastAPI over plain HTTP — the same way a web browser talks to a server. The fact that the UI is inside a Tauri window rather than a browser tab makes no difference at all to FastAPI. It sees ordinary HTTP requests.
+      </p>
+      <p>FastAPI is responsible for:</p>
+      <ul>
+        <li>Receiving uploaded CSV files and saving them to <code>data/</code></li>
+        <li>Running statistical tests, training models, evaluating results</li>
+        <li>Keeping track of pipeline progress in session state</li>
+        <li>Returning JSON results the UI can display</li>
+      </ul>
+    </section>
+
+    <section id="arch-tauri-role">
+      <h1>So why use Tauri at all?</h1>
+      <p>
+        Without Tauri, you would open a browser tab at <code>localhost:5173</code> and use the app that way. It works — and you can still do it with <code>npm run dev</code>.
+      </p>
+      <p>Tauri adds:</p>
+      <ul>
+        <li><strong>A proper window</strong> — it appears in your dock/taskbar like any other app, not a browser tab</li>
+        <li><strong>Distributable installers</strong> — <code>npm run tauri build</code> produces a <code>.dmg</code> or <code>.msi</code> you can send to someone without them needing to install Python or Node</li>
+        <li><strong>OS integration</strong> — app icons, title bar, native menus, window sizing</li>
+      </ul>
+      <div class="callout callout-info">
+        <strong>Note:</strong> the distributable build still requires the Python FastAPI server to be running. Tauri does not bundle Python. Packaging the Python backend into the installer is a separate problem (tools like PyInstaller can solve it, but that has not been done here yet).
+      </div>
+    </section>
+
+    <section id="arch-request-flow">
+      <h1>Request flow</h1>
+      <p>Here is exactly what happens when you click a button in the app:</p>
+
+      <div class="flow-steps">
+        <div class="flow-step">
+          <div class="flow-num">1</div>
+          <div class="flow-body">
+            <strong>User action in the Svelte UI</strong><br/>
+            e.g. clicking "Run Stage" calls a handler in <code>App.svelte</code>, such as <code>handleRunStats()</code>.
+          </div>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step">
+          <div class="flow-num">2</div>
+          <div class="flow-body">
+            <strong><code>client.js</code> makes a fetch() call</strong><br/>
+            <code>handleRunStats()</code> calls <code>runStats()</code> from <code>src/api/client.js</code>,
+            which does <code>fetch("http://localhost:8000/run/stats", { method: "POST" })</code>.
+            This is a standard browser HTTP request — no Rust involved.
+          </div>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step">
+          <div class="flow-num">3</div>
+          <div class="flow-body">
+            <strong>FastAPI route handler runs</strong><br/>
+            <code>api/main.py</code> receives the request on <code>POST /run/stats</code>,
+            validates that the previous stage is confirmed, then calls <code>run_stats(target)</code>
+            from <code>pipeline_runner.py</code>.
+          </div>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step">
+          <div class="flow-num">4</div>
+          <div class="flow-body">
+            <strong>Python does the computation</strong><br/>
+            <code>pipeline_runner.py</code> reads <code>data/cleaned_fraud.csv</code>,
+            runs correlation, VIF, and mutual information calculations using pandas and scikit-learn,
+            then writes <code>data/selected_features.json</code>.
+            Returns a Python dict.
+          </div>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step">
+          <div class="flow-num">5</div>
+          <div class="flow-body">
+            <strong>FastAPI serialises to JSON and responds</strong><br/>
+            FastAPI converts the dict to a JSON response body.
+            The HTTP response travels back to the Svelte app.
+          </div>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step">
+          <div class="flow-num">6</div>
+          <div class="flow-body">
+            <strong>Svelte stores the result and re-renders</strong><br/>
+            Back in <code>App.svelte</code>, <code>stageData.stats = result</code> and <code>stageStatus.stats = "awaiting_review"</code>
+            are set. Because these are Svelte 5 <code>$state</code> variables, the UI automatically re-renders
+            to show the stats table and enable the Confirm button.
+          </div>
+        </div>
+      </div>
+
+      <h2>Annotated code path</h2>
+      <pre><code>// 1. App.svelte — user clicks "Run Stage"
+async function handleRunStats() {
+  const result = await runStats();       // calls client.js
+  stageData.stats = result;              // triggers UI re-render
+  stageStatus.stats = "awaiting_review";
+}
+
+// 2. client.js — wraps the HTTP call
+export async function runStats() {
+  return fetch("http://localhost:8000/run/stats", { method: "POST" })
+    .then(res => res.json());
+}
+
+// 3. api/main.py — FastAPI receives the request
+@app.post("/run/stats")
+def run_stats_stage():
+  target = session.confirmed_outputs["etl"]["target"]
+  result = run_stats(target)             // calls pipeline_runner.py
+  session.stage_outputs["stats"] = result
+  session.stage_status["stats"] = "awaiting_review"
+  return result                          // serialised to JSON automatically
+
+// 4. api/pipeline_runner.py — actual computation
+def run_stats(target):
+  df = pd.read_csv(DATA / "cleaned_fraud.csv")
+  # ... correlation, VIF, mutual info ...
+  return { "features": [...], "scores": {...} }</code></pre>
+    </section>
+
+    <section id="arch-upload-flow">
+      <h1>Upload walkthrough</h1>
+      <p>File upload is slightly different because it sends a file, not JSON. Here is the full path:</p>
+
+      <div class="flow-steps">
+        <div class="flow-step">
+          <div class="flow-num">1</div>
+          <div class="flow-body">
+            <strong>User picks a file</strong><br/>
+            The <code>&lt;input type="file"&gt;</code> in <code>App.svelte</code> fires an <code>onchange</code> event.
+            <code>handleUpload(e)</code> reads <code>e.target.files[0]</code> — a browser <code>File</code> object.
+          </div>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step">
+          <div class="flow-num">2</div>
+          <div class="flow-body">
+            <strong>client.js sends multipart form data</strong><br/>
+            <code>uploadDataset(file)</code> creates a <code>FormData</code> object, appends the file,
+            and POSTs it to <code>/upload</code>. No <code>Content-Type: application/json</code> header — the browser sets the correct multipart boundary automatically.
+          </div>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step">
+          <div class="flow-num">3</div>
+          <div class="flow-body">
+            <strong>FastAPI receives the file as an UploadFile</strong><br/>
+            <code>async def upload_dataset(file: UploadFile)</code> — FastAPI's <code>UploadFile</code> is a streaming wrapper.
+            <code>shutil.copyfileobj(file.file, f)</code> writes the raw bytes to <code>data/fraudTrain.csv</code> on disk.
+          </div>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step">
+          <div class="flow-num">4</div>
+          <div class="flow-body">
+            <strong>Session is reset and path is stored</strong><br/>
+            <code>session.reset()</code> clears any previous run.
+            <code>session.dataset_path = str(dest)</code> stores the file path in memory
+            so every subsequent stage knows where to find the data.
+          </div>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step">
+          <div class="flow-num">5</div>
+          <div class="flow-body">
+            <strong>Summary is returned</strong><br/>
+            FastAPI calls <code>get_dataset_summary()</code> which reads the first 2000 rows with pandas,
+            counts rows/columns, and returns the result as JSON.
+            The UI stores this in <code>datasetInfo</code> and shows the filename + row count in the header.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="arch-state">
+      <h1>State &amp; session</h1>
+
+      <h2>Two separate state stores</h2>
+      <p>The app maintains state in two places that serve different purposes:</p>
+
+      <table>
+        <thead><tr><th>Location</th><th>What it holds</th><th>Lifetime</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><code>App.svelte</code> (<code>$state</code>)</td>
+            <td>UI state: active stage, loading flag, error message, raw result data to display</td>
+            <td>Lost on page refresh / window close</td>
+          </tr>
+          <tr>
+            <td><code>api/state.py</code> (<code>SessionState</code>)</td>
+            <td>Pipeline progress: stage statuses, confirmed outputs, dataset path, cached stage results</td>
+            <td>Lost when <code>uvicorn</code> restarts</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <p>
+        The Svelte UI does not persist the API's state — it holds a copy of results after a run, but those are just for display.
+        If you refresh the Tauri window the UI state is gone, but the FastAPI session is still intact (until you restart uvicorn or call <code>POST /reset</code>).
+        The UI can recover by calling <code>GET /status</code> on load.
+      </p>
+
+      <h2>Stage gating</h2>
+      <p>
+        Both layers independently enforce that stages run in order — the backend authoritatively, the frontend as a UI convenience:
+      </p>
+      <pre><code>// api/state.py — backend enforcement
+def can_run_stage(self, stage):
+  prev = STAGES[STAGE_ORDER[stage] - 1]
+  return self.stage_status[prev] in ("confirmed", "complete")
+
+// App.svelte — frontend enforcement (UI only)
+let canRunActive = $derived(() => {
+  const prev = STAGES[STAGES.indexOf(activeStage) - 1];
+  return stageStatus[prev] === "confirmed" || stageStatus[prev] === "complete";
+});</code></pre>
+      <p>Even if you bypass the UI and call the API directly, the backend will reject out-of-order requests with a <code>400</code> error.</p>
+
+      <h2>Stage status lifecycle</h2>
+      <div class="status-flow">
+        <span class="status-badge pending">pending</span>
+        <span class="status-arrow">→</span>
+        <span class="status-badge running">running</span>
+        <span class="status-arrow">→</span>
+        <span class="status-badge awaiting">awaiting_review</span>
+        <span class="status-arrow">→</span>
+        <span class="status-badge confirmed">confirmed</span>
+        <span class="status-arrow">→</span>
+        <span class="status-badge complete">complete</span>
+      </div>
+
+      <h2>Backend file map</h2>
+      <table>
+        <thead><tr><th>File</th><th>Purpose</th></tr></thead>
+        <tbody>
+          <tr><td><code>api/main.py</code></td><td>All FastAPI route handlers — receives requests, calls runner, updates session</td></tr>
+          <tr><td><code>api/pipeline_runner.py</code></td><td>All ML computation — stats, training, evaluation, scoring. No HTTP, no state.</td></tr>
+          <tr><td><code>api/state.py</code></td><td>Single <code>SessionState</code> instance shared across all requests</td></tr>
+          <tr><td><code>api/schemas.py</code></td><td>Pydantic models that validate request bodies and shape response JSON</td></tr>
+        </tbody>
+      </table>
+
+      <h2>Frontend file map</h2>
+      <table>
+        <thead><tr><th>Path</th><th>Purpose</th></tr></thead>
+        <tbody>
+          <tr><td><code>ui/src/App.svelte</code></td><td>Root — owns all shared state, handles runs, routes to stage components</td></tr>
+          <tr><td><code>ui/src/api/client.js</code></td><td>Thin wrappers around <code>fetch()</code> — one function per endpoint</td></tr>
+          <tr><td><code>ui/src/components/stages/</code></td><td>One component per pipeline stage — receive data as props, emit events upward</td></tr>
+          <tr><td><code>ui/src/components/shared/</code></td><td>Reusable display components: StatusBadge, MetricCard, ConfirmButton, SectionCard</td></tr>
+          <tr><td><code>ui/src-tauri/src/lib.rs</code></td><td>Rust entry point — creates the window, nothing else</td></tr>
+          <tr><td><code>ui/src-tauri/tauri.conf.json</code></td><td>Window config: size, title, dev URL (<code>localhost:5173</code>), bundle settings</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- DATA FILES -->
+    <section id="data-files">
+      <h1>Data Files</h1>
+      <p>All files are written to the <code>data/</code> directory at the project root. This directory is gitignored.</p>
+
+      <table>
+        <thead><tr><th>File</th><th>Created by</th><th>Contents</th></tr></thead>
+        <tbody>
+          <tr><td><code>fraudTrain.csv</code></td><td>Upload</td><td>Raw uploaded dataset</td></tr>
+          <tr><td><code>cleaned_fraud.csv</code></td><td>ETL confirm</td><td>Encoded, column-filtered dataset</td></tr>
+          <tr><td><code>class_weights.json</code></td><td>ETL confirm</td><td><code>{"0": 0.5, "1": 86.3}</code> style weight map</td></tr>
+          <tr><td><code>selected_features.json</code></td><td>Stats confirm</td><td>Array of feature column names</td></tr>
+          <tr><td><code>model.pkl</code></td><td>Model run</td><td>Serialised RandomForestClassifier (joblib)</td></tr>
+          <tr><td><code>model_metrics.json</code></td><td>Model run</td><td>ROC-AUC, confusion matrix, classification report, feature importances</td></tr>
+          <tr><td><code>eval_report.json</code></td><td>Evaluate run</td><td>Threshold sweep results, confirmed threshold</td></tr>
+          <tr><td><code>scored_output.csv</code></td><td>Score run</td><td>Original dataset + probability + segment columns</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

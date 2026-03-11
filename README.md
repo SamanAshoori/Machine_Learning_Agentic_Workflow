@@ -1,140 +1,143 @@
-# Agentic Credit Card Fraud Detection Pipeline
+# Agentic ML Pipeline
 
-An end-to-end ML pipeline for credit card fraud detection, built using autonomous AI agents. Each stage of the pipeline is handled by a dedicated CrewAI agent powered by the Gemini API — from raw data through to a generated PowerPoint report.
+A desktop app for end-to-end ML classification on any CSV dataset. Upload data, pick a target column, and step through feature selection, model training, evaluation, and probability scoring — with human-in-the-loop review at every stage.
 
-Built as a personal project to explore MLOps and agentic AI workflows, inspired by an internal talk on AI at work and conveniently timed with a Principles of Data Science module.
-
----
-
-## Pipeline Overview
-
-```
-etl.py → stats.py → model.py → evaluate.py → report.py
-```
-
-| Stage | Agent | Output |
-|-------|-------|--------|
-| ETL | Data Cleaning Specialist | `cleaned_fraud.csv`, `class_weights.json` |
-| Statistical Testing | Statistical Analyst | `selected_features.json` |
-| Model Training | ML Engineer | `model.pkl`, `model_metrics.json` |
-| Evaluation | Model Evaluator | `eval_report.json` |
-| Reporting | Data Storyteller | `fraud_detection_report.pptx` |
-
-Each agent generates a Python or JavaScript script which is automatically saved and run. All outputs feed into the next stage.
+**Stack:** Tauri v2 · Svelte 5 · Tailwind CSS 4 · FastAPI · scikit-learn
 
 ---
 
-## Results
+## Prerequisites
 
-| Metric | Value |
-|--------|-------|
-| Model | Random Forest |
-| ROC-AUC (test) | 0.993 |
-| Fraud Recall @ 0.5 threshold | 92.7% |
-| Fraud Precision @ 0.8 threshold | 79.2% |
-| False Positives @ 0.8 threshold | 429 |
+Install these before anything else.
 
-The optimal threshold of 0.8 significantly reduces false positives (5,706 → 429) at the cost of some recall — a tradeoff configurable based on business priority.
-
----
-
-## Tech Stack
-
-- **CrewAI** — agent orchestration
-- **Gemini API** — LLM backbone (started with Ollama locally)
-- **scikit-learn** — Random Forest, feature selection, evaluation
-- **pandas / numpy** — data processing
-- **pptxgenjs** — PowerPoint report generation
-- **Python 3.13**
-
----
-
-## Project Structure
-
-```
-agentic/
-├── config.py               # LLM configuration
-├── agents.py               # All agent definitions
-├── etl.py                  # ETL pipeline runner
-├── stats.py                # Statistical testing runner
-├── model.py                # Model training runner
-├── evaluate.py             # Evaluation runner
-├── report.py               # PowerPoint report runner
-├── pipeline.py             # Full end-to-end runner
-├── tasks/
-│   ├── etl_tasks.py
-│   ├── stats_tasks.py
-│   ├── model_tasks.py
-│   ├── eval_tasks.py
-│   └── report_tasks.py
-└── data/                   # Generated outputs (gitignored)
-```
+| Tool | macOS | Windows |
+|---|---|---|
+| Python 3.10+ | `brew install python` | [python.org](https://www.python.org/downloads/) — tick "Add to PATH" |
+| Node.js 18+ | `brew install node` | [nodejs.org](https://nodejs.org/) LTS |
+| Rust | `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \| sh` | [rustup.rs](https://rustup.rs/) |
+| Xcode CLI (macOS only) | `xcode-select --install` | — |
+| C++ Build Tools + WebView2 (Windows only) | — | [tauri.app/start/prerequisites](https://tauri.app/start/prerequisites/) |
 
 ---
 
 ## Setup
 
-**1. Clone and install dependencies:**
+### 1. Python backend
+
+**macOS / Linux**
 ```bash
-git clone https://github.com/SamanAshoori/Machine_Learning_Agentic_Workflow.git
-cd agentic
 python3 -m venv venv
 source venv/bin/activate
-pip install crewai "crewai[google-genai]" pandas numpy scikit-learn imbalanced-learn joblib python-dotenv
-npm install pptxgenjs
+pip install fastapi uvicorn pandas numpy scikit-learn scipy joblib python-dotenv
 ```
 
-**2. Add your Gemini API key:**
+**Windows (PowerShell)**
+```powershell
+python -m venv venv
+venv\Scripts\activate
+pip install fastapi uvicorn pandas numpy scikit-learn scipy joblib python-dotenv
+```
+
+### 2. Frontend
+
 ```bash
-cp .env.example .env
-# Add your key from https://aistudio.google.com
-```
-
-**3. Add your dataset:**
-
-Download the [Kaggle Credit Card Fraud dataset](https://www.kaggle.com/datasets/kartik2112/fraud-detection) and place in `data/`:
-```
-data/fraudTrain.csv
-data/fraudTest.csv
-```
-
-**4. Run the full pipeline:**
-```bash
-python3 pipeline.py
-```
-
-Or run individual stages:
-```bash
-python3 etl.py        # Clean data
-python3 stats.py      # Feature selection
-python3 model.py      # Train model
-python3 evaluate.py   # Evaluate on test set
-python3 report.py     # Generate PowerPoint
+cd ui
+npm install
 ```
 
 ---
 
-## Key Learnings
+## Running (development)
 
-**This project was about MLOps, not the model.** The goal was building a repeatable, automated, auditable pipeline where each stage feeds the next cleanly.
+Open two terminals from the project root.
 
-**AI agents accelerate but do not replace human oversight.** Every generated script required review — wrong API signatures, incorrect operation ordering, hallucinated filenames were all common. The speed gain is real; so is the need to understand what the agent produced.
+**Terminal 1 — API server**
 
-**Local vs API LLMs matter.** Ollama (llama3.2, gemma3:12b) works well for exploration but hit quality limits on code generation tasks. Gemini API produced significantly more consistent output.
+macOS/Linux:
+```bash
+source venv/bin/activate
+uvicorn api.main:app --reload --port 8000
+```
+
+Windows:
+```powershell
+venv\Scripts\activate
+uvicorn api.main:app --reload --port 8000
+```
+
+**Terminal 2 — Desktop app**
+
+```bash
+cd ui
+npm run tauri dev
+```
+
+The Tauri window opens automatically. The API must be running first.
+
+> **Browser-only** (skips Rust/Tauri): run `npm run dev` inside `ui/` and open `http://localhost:5173`. API still needs to be on port 8000.
 
 ---
 
-## Next Steps
+## Building a distributable
 
-- Swap Random Forest for XGBoost for likely performance gains
-- Add a hyperparameter tuning agent
-- Retrain on combined train + test data for production use
-- Add threshold selection logic based on configurable business rules
+```bash
+cd ui
+npm run tauri build
+```
+
+Output locations:
+- **macOS:** `ui/src-tauri/target/release/bundle/macos/` (.app + .dmg)
+- **Windows:** `ui/src-tauri/target/release/bundle/msi/` (.msi) or `nsis/` (.exe installer)
+
+First build takes several minutes — Rust compiles from scratch.
 
 ---
 
-## Dataset
+## Pipeline stages
 
-[Credit Card Fraud Detection — Kaggle](https://www.kaggle.com/datasets/kartik2112/fraud-detection)
+| # | Stage | What happens | Output |
+|---|---|---|---|
+| 1 | **ETL** | Upload CSV, pick target column, keep/drop columns | `data/cleaned_fraud.csv` |
+| 2 | **Stats** | Correlation, VIF, mutual information → feature selection | `data/selected_features.json` |
+| 3 | **Model** | Train RandomForest with configurable hyperparameters | `data/model.pkl`, `data/model_metrics.json` |
+| 4 | **Evaluate** | Threshold tuning, precision/recall tradeoff | `data/eval_report.json` |
+| 5 | **Score** | Run model on full dataset, probability + segment per row | `data/scored_output.csv` |
 
-Simulated credit card transactions 2019–2020, 1.29M training records, 0.58% fraud rate.
+Scored output includes all original columns plus:
+- `probability` — model's predicted probability (0–1)
+- `segment_name` — Low / Medium / High / Very High
+- `segment_number` — 1 / 2 / 3 / 4
+
+---
+
+## Project structure
+
+```
+api/
+  main.py               Route handlers
+  pipeline_runner.py    All ML computation
+  state.py              In-memory session state
+  schemas.py            Pydantic models
+
+ui/
+  src/
+    App.svelte                    Root layout + sidebar stepper
+    components/stages/            ETLStage, StatsStage, ModelStage, EvaluateStage
+    components/shared/            Reusable UI components
+    api/client.js                 All fetch calls to the API
+  src-tauri/                      Rust / Tauri shell
+
+data/                             Created at runtime (gitignored)
+```
+
+---
+
+## Troubleshooting
+
+**`uvicorn` not found** — activate the venv first (`source venv/bin/activate` or `venv\Scripts\activate`).
+
+**Tauri build fails on Windows** — install Microsoft C++ Build Tools and WebView2 Runtime. Full guide: [tauri.app/start/prerequisites](https://tauri.app/start/prerequisites/).
+
+**`npm run tauri dev` hangs or errors** — make sure port 5173 is free. Kill any stale Vite processes and retry.
+
+**CORS errors in browser mode** — the API allows all origins in dev. Confirm `uvicorn` is running on port 8000.

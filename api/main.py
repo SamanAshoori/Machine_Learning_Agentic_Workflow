@@ -14,6 +14,8 @@ from api.schemas import (
     EvaluateConfirm,
     TargetRequest,
 )
+from fastapi.responses import FileResponse
+
 from api.pipeline_runner import (
     get_dataset_summary,
     get_column_details,
@@ -22,6 +24,7 @@ from api.pipeline_runner import (
     run_stats,
     run_model,
     run_evaluate,
+    run_scoring,
     DATA,
 )
 
@@ -201,8 +204,37 @@ def confirm_evaluate(payload: EvaluateConfirm):
         raise HTTPException(400, "Evaluate is not awaiting review")
     session.confirmed_outputs["evaluate"] = payload.model_dump()
     session.stage_status["evaluate"] = "confirmed"
-    session.current_stage = "complete"
     return {"status": "confirmed", "stage": "evaluate"}
+
+
+# ---------------------------------------------------------------------------
+# Scoring — probability output with segments
+# ---------------------------------------------------------------------------
+
+@app.post("/run/scoring")
+def run_scoring_stage():
+    if session.stage_status["evaluate"] not in ("confirmed", "complete"):
+        raise HTTPException(400, "Evaluate stage must be confirmed first")
+    target = session.confirmed_outputs["etl"]["target"]
+    features = session.confirmed_outputs["stats"]["selected_features"]
+    try:
+        session.stage_status["scoring"] = "running"
+        result = run_scoring(target=target, selected_features=features)
+        session.stage_outputs["scoring"] = result
+        session.stage_status["scoring"] = "complete"
+        session.current_stage = "complete"
+        return result
+    except Exception as e:
+        session.stage_status["scoring"] = "pending"
+        raise HTTPException(500, f"Scoring failed: {str(e)}")
+
+
+@app.get("/download/scored")
+def download_scored():
+    path = DATA / "scored_output.csv"
+    if not path.exists():
+        raise HTTPException(404, "Scored output not found")
+    return FileResponse(path, media_type="text/csv", filename="scored_output.csv")
 
 
 # ---------------------------------------------------------------------------
